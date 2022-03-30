@@ -1,0 +1,1683 @@
+---
+title: "NexusData"
+author: '680029924'
+date: "21/01/2022"
+output:
+  html_document:
+      toc: true
+      toc_float: true
+      toc_depth: 5
+      code_folding: hide
+      code_download: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+```{r, cache = TRUE}
+# Formatting chunk
+
+# Clear workspace
+rm(list = ls())
+
+# Specify libraries
+
+library(tidyverse)
+library(lubridate)
+library(naniar)
+
+# Read data from web
+cameroon_read <- read_csv(url("https://datashare.ed.ac.uk/bitstream/handle/10283/3804/Heat-Covid%20Nexus%20Survey_Cameroon.csv?sequence=1&isAllowed=y"), n_max = 2000)
+indonesia_read <- read_csv(url("https://datashare.ed.ac.uk/bitstream/handle/10283/3804/Heat-Covid%20Nexus%20Survey_Indonesia.csv?sequence=2&isAllowed=y"), n_max = 2000)
+pakistan_read <- read_csv(url("https://datashare.ed.ac.uk/bitstream/handle/10283/3804/Heat-Covid%20Nexus%20Survey_Pakistan.csv?sequence=14&isAllowed=y"), n_max = 2000)
+india_read <- read_csv(url("https://datashare.ed.ac.uk/bitstream/handle/10283/3804/Heat-Covid%20Nexus%20Survey_India.csv?sequence=15&isAllowed=y"), n_max = 2000)
+
+
+# Crop objects
+pakistan_cropped <- pakistan_read %>% filter(Country == "Pakistan")
+
+
+india_cropped <- india_read %>% filter(Country == "India")
+
+
+# Generate R-legible names
+names(cameroon_read) <- str_replace_all(names(cameroon_read), c(" " = "_", 
+                                                                "/" = "_or_",
+                                                                "'" = ""))
+names(indonesia_read) <- str_replace_all(names(indonesia_read), c(" " = "_", 
+                                                                  "/" = "_or_",
+                                                                  "'" = ""))
+names(pakistan_cropped) <- str_replace_all(names(pakistan_cropped), c(" " = "_", 
+                                                                      "/" = "_or_",
+                                                                      "'" = ""))
+names(india_cropped) <- str_replace_all(names(india_cropped), c(" " = "_", 
+                                                                "/" = "_or_",
+                                                                "'" = ""))
+
+# Tidy objects
+cameroon_factors <- c("Country", "Language", "Agree", "Littoral", "Gender", "Occupation", "Occupation_Translated", "Occupation_Coded", 
+                      "OwnHouse", "CoolHome", "Electricity", "DrinkingWater", "HouseholdPurposes", "RoofingMaterial", "WallMaterial", 
+                      "FloorMaterial", "Windows", "NormallyDo", "NormallyDo_Translated", "NormallyDo_Coded", "Add_ventilation", 
+                      "Cant_go_outside_(COVID_related)", "Clean_floor_with_water", "Do_nothing_specific", "Draw_curtains", 
+                      "Drink_cold_drink", "Drink_warm_drink", "Drink_water", "Go_outside", "Sit_under_tree", "Sleep_outside", 
+                      "Sleep_or_lie_on_floor", "Sleep_or_rest", "Smoke", "Stay_at_home", "Take_a_bath_or_shower", "Turn_off_lights", 
+                      "Turn_on_power_source", "Unclear", "Undress_or_change_clothes_or_wet_clothes", "Use_a_cooler", "Use_AC", "Use_fan", 
+                      "Use_manual_fan_or_cooling_device", "Use_talcum_powder", "PandemicChange", "YesPandemicChange", 
+                      "YesPandemicChange_Translated", "YesPandemicChange_Recoded", "SpendAtHome", "AmountOfTime", "Income", 
+                      "EatingHabits", "WaterIntake", "ElectricityUsage", "HealthServices", "HomeWarm", "TemperatureInsideHome", 
+                      "TemperatureOutsideHome", "Experience_Blurred_vision", "Experience_Clammy_skin", "Experience_Concentration_loss", 
+                      "Experience_Confusion", "Experience_Convulsions", "Experience_Dizziness", "Experience_DONT_KNOW", 
+                      "Experience_Fainting_[brief_loss_of_consciousness]", "Experience_Fatigue", "Experience_Feeling_hot", 
+                      "Experience_Feeling_listless_or_lack_of_engagement_with_social_activities_or_family", "Experience_Feeling_sweaty", 
+                      "Experience_Feeling_thirsty", "Experience_Headache", "Experience_Irrational_behaviour", 
+                      "Experience_Loss_of_consciousness_[extensive]", "Experience_Muscle_cramps", "Experience_Muscle_weakness", 
+                      "Experience_Nausea", "Experience_Poor_quality_of_sleep", "Experience_Rash", "Experience_REFUSED", 
+                      "Experience_Vomiting", "ExperienceBeforeHeat", "ExperienceBeforeHeat_(Blurred_vision)", 
+                      "ExperienceBeforeHeat_(Clammy_skin)", "ExperienceBeforeHeat_(Concentration_loss)", "ExperienceBeforeHeat_(Confusion)", 
+                      "ExperienceBeforeHeat_(Convulsions)", "ExperienceBeforeHeat_(Dizziness)", 
+                      "ExperienceBeforeHeat_(Fainting_[brief_loss_of_consciousness])", "ExperienceBeforeHeat_(Fatigue)", 
+                      "ExperienceBeforeHeat_(Feeling_hot)", 
+                      "ExperienceBeforeHeat_(Feeling_listless_or_lack_of_engagement_with_social_activities_or_family)", 
+                      "ExperienceBeforeHeat_(Feeling_sweaty)", "ExperienceBeforeHeat_(Feeling_thirsty)", "ExperienceBeforeHeat_(Headache)", 
+                      "ExperienceBeforeHeat_(Irrational_behaviour)", "ExperienceBeforeHeat_(Loss_of_consciousness_[extensive])", 
+                      "ExperienceBeforeHeat_(Muscle_cramps)", "ExperienceBeforeHeat_(Muscle_weakness)", "ExperienceBeforeHeat_(Nausea)", 
+                      "ExperienceBeforeHeat_(Poor_quality_of_sleep)", "ExperienceBeforeHeat_(Rash)", "ExperienceBeforeHeat_(Vomiting)", 
+                      "FeelingMore", "PhysicalConflict", "HeatAffect")
+
+cameroon_tidy <- cameroon_read %>% mutate_at(cameroon_factors, factor) %>% rename(Region = Littoral)
+
+indonesia_factors <- c("Country", "Agree", "ADM-1", "Gender", "Occupation", "Occupation_Translated", "Occupation_Coded", "OwnHouse", 
+                       "CoolHome", "Electricity",  "DrinkingWater", "HouseholdPurposes", "RoofingMaterial", "WallMaterial", "FloorMaterial", 
+                       "Windows", "NormallyDo", "NormallyDo_Translated", "NormallyDo_Coded", "Add_ventilation", 
+                       "Cant_go_outside_(COVID_related)", "Clean_floor_with_water", "Do_nothing_specific", "Draw_curtains", 
+                       "Drink_cold_drink", "Drink_warm_drink", "Drink_water", "Go_outside", "Sit_under_tree", "Sleep_outside", 
+                       "Sleep_or_lie_on_floor", "Sleep_or_rest", "Smoke", "Stay_at_home", "Take_a_bath_or_shower", "Turn_off_lights", 
+                       "Turn_on_power_source", "Unclear", "Undress_or_change_clothes_or_wet_clothes", "Use_a_cooler", "Use_AC", "Use_fan", 
+                       "Use_manual_fan_or_cooling_device", "Use_talcum_powder", "PandemicChange", "YesPandemicChange", 
+                       "YesPandemicChange_Translated", "YesPandemicChange_CodedGeneral", "YesPandemicChange_CodedSpecific", 
+                       "SpendAtHome", "AmountOfTime", "Income", "EatingHabits", "WaterIntake", "ElectricityUsage", "HealthServices", 
+                       "HomeWarm", "TemperatureInsideHome", "TemperatureOutsideHome", "Experience_Blurred_vision", "Experience_Clammy_skin", 
+                       "Experience_Concentration_loss", "Experience_Confusion", "Experience_Convulsions", "Experience_Dizziness", 
+                       "Experience_DONT_KNOW", "Experience_Fainting_[brief_loss_of_consciousness]", "Experience_Fatigue", 
+                       "Experience_Feeling_hot", "Experience_Feeling_listless_or_lack_of_engagement_with_social_activities_or_family", 
+                       "Experience_Feeling_sweaty", "Experience_Feeling_thirsty", "Experience_Headache", "Experience_Irrational_behaviour", 
+                       "Experience_Loss_of_consciousness_[extensive]", "Experience_Muscle_cramps", "Experience_Muscle_weakness", 
+                       "Experience_Nausea", "Experience_Poor_quality_of_sleep", "Experience_Rash", "Experience_REFUSED", 
+                       "Experience_Vomiting", "ExperienceBeforeHeat", "ExperienceBeforeHeat_(Blurred_vision)", 
+                       "ExperienceBeforeHeat_(Clammy_skin)", "ExperienceBeforeHeat_(Concentration_loss)", "ExperienceBeforeHeat_(Confusion)", 
+                       "ExperienceBeforeHeat_(Convulsions)", "ExperienceBeforeHeat_(Dizziness)", 
+                       "ExperienceBeforeHeat_(Fainting_[brief_loss_of_consciousness])", "ExperienceBeforeHeat_(Fatigue)", 
+                       "ExperienceBeforeHeat_(Feeling_hot)", 
+                       "ExperienceBeforeHeat_(Feeling_listless_or_lack_of_engagement_with_social_activities_or_family)", 
+                       "ExperienceBeforeHeat_(Feeling_sweaty)", "ExperienceBeforeHeat_(Feeling_thirsty)", 
+                       "ExperienceBeforeHeat_(Headache)", "ExperienceBeforeHeat_(Irrational_behaviour)", 
+                       "ExperienceBeforeHeat_(Loss_of_consciousness_[extensive])", "ExperienceBeforeHeat_(Muscle_cramps)", 
+                       "ExperienceBeforeHeat_(Muscle_weakness)", "ExperienceBeforeHeat_(Nausea)", 
+                       "ExperienceBeforeHeat_(Poor_quality_of_sleep)", "ExperienceBeforeHeat_(Rash)", 
+                       "ExperienceBeforeHeat_(Vomiting)", "FeelingMore", "PhysicalConflict", "HeatAffect")
+
+indonesia_tidy <- indonesia_read %>%  mutate_at(indonesia_factors, factor) %>% 
+  select(1:114) %>%
+  rename("YesPandemicChange_Recoded" = "YesPandemicChange_CodedSpecific") %>%
+  select(-YesPandemicChange_CodedGeneral) %>%
+  mutate("Language" = NA, .before = "Agree") %>%
+  rename("Region" = "ADM-1")
+
+pakistan_factors <- c("Country", "Agree", "Region", "Gender", "Occupation", "Occupation_Translated", "Occupation_Coded", "OwnHouse", 
+                      "CoolHome", "Electricity",  "DrinkingWater", "HouseholdPurposes", "RoofingMaterial", "WallMaterial", "FloorMaterial", 
+                      "Windows", "NormallyDo", "NormallyDo_Translated", "NormallyDo_Coded", "Add_ventilation", 
+                      "Cant_go_outside_(COVID_related)", "Clean_floor_with_water", "Do_nothing_specific", "Draw_curtains", 
+                      "Drink_cold_drink", "Drink_warm_drink", "Drink_water", "Go_outside", "Sit_under_tree", "Sleep_outside", 
+                      "Sleep_or_lie_on_floor", "Sleep_or_rest", "Smoke", "Stay_at_home", "Take_a_bath_or_shower", "Turn_off_lights", 
+                      "Turn_on_power_source", "Unclear", "Undress_or_change_clothes_or_wet_clothes", "Use_a_cooler", "Use_AC", "Use_fan", 
+                      "Use_manual_fan_or_cooling_device", "Use_talcum_powder", "PandemicChange", "YesPandemicChange", 
+                      "YesPandemicChange_Translated", "YesPandemicChange_Recoded", 
+                      "SpendAtHome", "AmountOfTime", "Income", "EatingHabits", "WaterIntake", "ElectricityUsage", "HealthServices", 
+                      "HomeWarm", "TemperatureInsideHome", "TemperatureOutsideHome", "Experience_Blurred_vision", "Experience_Clammy_skin", 
+                      "Experience_Concentration_loss", "Experience_Confusion", "Experience_Convulsions", "Experience_Dizziness", 
+                      "Experience_DONT_KNOW", "Experience_Fainting_[brief_loss_of_consciousness]", "Experience_Fatigue", 
+                      "Experience_Feeling_hot", "Experience_Feeling_listless_or_lack_of_engagement_with_social_activities_or_family", 
+                      "Experience_Feeling_sweaty", "Experience_Feeling_thirsty", "Experience_Headache", "Experience_Irrational_behaviour", 
+                      "Experience_Loss_of_consciousness_[extensive]", "Experience_Muscle_cramps", "Experience_Muscle_weakness", 
+                      "Experience_Nausea", "Experience_Poor_quality_of_sleep", "Experience_Rash", "Experience_REFUSED", 
+                      "Experience_Vomiting", "ExperienceBeforeHeat", "ExperienceBeforeHeat_(Blurred_vision)", 
+                      "ExperienceBeforeHeat_(Clammy_skin)", "ExperienceBeforeHeat_(Concentration_loss)", "ExperienceBeforeHeat_(Confusion)", 
+                      "ExperienceBeforeHeat_(Convulsions)", "ExperienceBeforeHeat_(Dizziness)", 
+                      "ExperienceBeforeHeat_(Fainting_[brief_loss_of_consciousness])", "ExperienceBeforeHeat_(Fatigue)", 
+                      "ExperienceBeforeHeat_(Feeling_hot)", 
+                      "ExperienceBeforeHeat_(Feeling_listless_or_lack_of_engagement_with_social_activities_or_family)", 
+                      "ExperienceBeforeHeat_(Feeling_sweaty)", "ExperienceBeforeHeat_(Feeling_thirsty)", 
+                      "ExperienceBeforeHeat_(Headache)", "ExperienceBeforeHeat_(Irrational_behaviour)", 
+                      "ExperienceBeforeHeat_(Loss_of_consciousness_[extensive])", "ExperienceBeforeHeat_(Muscle_cramps)", 
+                      "ExperienceBeforeHeat_(Muscle_weakness)", "ExperienceBeforeHeat_(Nausea)", 
+                      "ExperienceBeforeHeat_(Poor_quality_of_sleep)", "ExperienceBeforeHeat_(Rash)", 
+                      "ExperienceBeforeHeat_(Vomiting)", "FeelingMore", "PhysicalConflict", "HeatAffect")
+
+pakistan_tidy <- pakistan_cropped %>%
+  rename("Region" = "ADM-1") %>%
+  mutate(Region = Sindh) %>%
+  select(-Sindh, -YesPandemicChange_CodedGeneral, -Language2) %>%
+  mutate("Occupation_Translated" = NA, .before = "Occupation_Coded") %>%
+  rename("YesPandemicChange_Recoded" = "YesPandemicChange_CodedSpecific") %>%
+  rename("ExperienceBeforeHeat_(Concentration_loss)" = "ExperineceBeforeHeat_(Concentration_loss)") %>%
+  mutate_at(pakistan_factors, factor)
+
+india_factors <- c("Country", "Agree", "Region", "Gender", "Occupation", "Occupation_Translated", "Occupation_Coded", "OwnHouse", 
+                   "CoolHome", "Electricity",  "DrinkingWater", "HouseholdPurposes", "RoofingMaterial", "WallMaterial", "FloorMaterial", 
+                   "Windows", "NormallyDo", "NormallyDo_Translated", "NormallyDo_Coded", "Add_ventilation", 
+                   "Cant_go_outside_(COVID_related)", "Clean_floor_with_water", "Do_nothing_specific", "Draw_curtains", 
+                   "Drink_cold_drink", "Drink_warm_drink", "Drink_water", "Go_outside", "Sit_under_tree", "Sleep_outside", 
+                   "Sleep_or_lie_on_floor", "Sleep_or_rest", "Smoke", "Stay_at_home", "Take_a_bath_or_shower", "Turn_off_lights", 
+                   "Turn_on_power_source", "Unclear", "Undress_or_change_clothes_or_wet_clothes", "Use_a_cooler", "Use_AC", "Use_fan", 
+                   "Use_manual_fan_or_cooling_device", "Use_talcum_powder", "PandemicChange", "YesPandemicChange", 
+                   "YesPandemicChange_Translated", "YesPandemicChange_Recoded", 
+                   "SpendAtHome", "AmountOfTime", "Income", "EatingHabits", "WaterIntake", "ElectricityUsage", "HealthServices", 
+                   "HomeWarm", "TemperatureInsideHome", "TemperatureOutsideHome", "Experience_Blurred_vision", "Experience_Clammy_skin", 
+                   "Experience_Concentration_loss", "Experience_Confusion", "Experience_Convulsions", "Experience_Dizziness", 
+                   "Experience_DONT_KNOW", "Experience_Fainting_[brief_loss_of_consciousness]", "Experience_Fatigue", 
+                   "Experience_Feeling_hot", "Experience_Feeling_listless_or_lack_of_engagement_with_social_activities_or_family", 
+                   "Experience_Feeling_sweaty", "Experience_Feeling_thirsty", "Experience_Headache", "Experience_Irrational_behaviour", 
+                   "Experience_Loss_of_consciousness_[extensive]", "Experience_Muscle_cramps", "Experience_Muscle_weakness", 
+                   "Experience_Nausea", "Experience_Poor_quality_of_sleep", "Experience_Rash", "Experience_REFUSED", 
+                   "Experience_Vomiting", "ExperienceBeforeHeat", "ExperienceBeforeHeat_(Blurred_vision)", 
+                   "ExperienceBeforeHeat_(Clammy_skin)", "ExperienceBeforeHeat_(Concentration_loss)", "ExperienceBeforeHeat_(Confusion)", 
+                   "ExperienceBeforeHeat_(Convulsions)", "ExperienceBeforeHeat_(Dizziness)", 
+                   "ExperienceBeforeHeat_(Fainting_[brief_loss_of_consciousness])", "ExperienceBeforeHeat_(Fatigue)", 
+                   "ExperienceBeforeHeat_(Feeling_hot)", 
+                   "ExperienceBeforeHeat_(Feeling_listless_or_lack_of_engagement_with_social_activities_or_family)", 
+                   "ExperienceBeforeHeat_(Feeling_sweaty)", "ExperienceBeforeHeat_(Feeling_thirsty)", 
+                   "ExperienceBeforeHeat_(Headache)", "ExperienceBeforeHeat_(Irrational_behaviour)", 
+                   "ExperienceBeforeHeat_(Loss_of_consciousness_[extensive])", "ExperienceBeforeHeat_(Muscle_cramps)", 
+                   "ExperienceBeforeHeat_(Muscle_weakness)", "ExperienceBeforeHeat_(Nausea)", 
+                   "ExperienceBeforeHeat_(Poor_quality_of_sleep)", "ExperienceBeforeHeat_(Rash)", 
+                   "ExperienceBeforeHeat_(Vomiting)", "FeelingMore", "PhysicalConflict", "HeatAffect")
+
+india_tidy <- india_cropped %>%
+  select(-`ADM-1-IND1`, -`ADM-1-IND2`, -`ADM-1-IND3`, -`ADM-1-IND4`) %>%
+  rename("Region" = "ADM-1-IND5") %>%
+  mutate("Occupation_Translated" = NA, .before = "Occupation_Coded") %>%
+  rename("YesPandemicChange_Recoded" = "YesPandemicChange_CodedSpecific") %>%
+  select(-YesPandemicChange_CodedGeneral, -Language2) %>%
+  rename("Temperature" = "Temperature_(C)", "Heat_Index" = "Heat_Index_(C)") %>%
+  mutate_at(india_factors, factor)
+
+
+
+
+# Join data to make a new dataset including ALL four countries - drop one row from Indonesia (lacks Country variable)
+# Subsets to only those households with maximum 24 hours per day of electricity
+# Also tidy some variables and create new variables
+nexusdata <- bind_rows(cameroon_tidy, indonesia_tidy, pakistan_tidy, india_tidy) %>%
+  filter(!is.na(Country)) %>%
+  mutate(Language = as_factor(Language)) %>%
+  mutate(OptIn_Date = dmy(OptIn_Date)) %>%
+  mutate(Region = recode(Region, DOUALA = "Douala", 'Jakarta Special Capital Region' = "Jakarta")) %>%
+  mutate(City = as_factor(str_c(Country, " - ", Region))) %>%
+  mutate(Country = fct_relevel(Country, c("Pakistan",
+                                          "India",
+                                          "Indonesia",
+                                          "Cameroon"))) %>%
+  mutate(Gender = as_factor(str_to_sentence(Gender))) %>%
+  mutate(DrinkingWater = as_factor(recode(DrinkingWater, 
+                                          "BOTTLES" = "bottled water",
+                                          'COMMUNAL TAP/SHARED TAP [ALSO CALLED STAND PIPE/STREET END TAP/YARD TAP]' = "shared tap",
+                                          'SUPPLIED IN TANKS' = "supplied in tanks",
+                                          "OTHER" = "other"))) %>%
+  mutate(HouseholdPurposes = recode(HouseholdPurposes,
+                                    'COMMUNAL OR STREET-END TAP' = "shared tap",
+                                    "OTHER" = "other",
+                                    'SUPPLIED IN TANKS' = "supplied in tanks")) %>%
+  filter(HoursDay<25) %>% # Remove unrealistic hours of electricity per day
+  filter(People_in_House<16) %>% # Remove outliers (99.9% of the data)
+  mutate(SpendAtHome = as_factor(str_to_sentence(SpendAtHome))) %>%
+  mutate(SpendAtHome = fct_relevel(SpendAtHome, c("Most of the day - except for short trips out", 
+                                                "Half of the day", 
+                                                "Some of the day",
+                                                "Very little - only for sleeping", 
+                                                "Other", 
+                                                "Don't know", 
+                                                "Refused"))) %>%
+  mutate(AmountOfTime = as_factor(str_to_sentence(AmountOfTime))) %>%
+  mutate(AmountOfTime = fct_relevel(AmountOfTime, c("Significantly increased", 
+                                                  "Slightly increased", 
+                                                  "Remained about the same",
+                                                  "Slightly decreased", 
+                                                  "Significantly decreased", 
+                                                  "Don't know", 
+                                                  "Refused"))) %>%
+  mutate(Income = as_factor(str_to_sentence(Income))) %>%
+  mutate(Income = fct_relevel(Income, c("Significantly increased", 
+                                                    "Slightly increased", 
+                                                    "Remained about the same",
+                                                    "Slightly decreased", 
+                                                    "Significantly decreased", 
+                                                    "Don't know", 
+                                                    "Refused"))) %>%
+  mutate(Occupation_Coded = as_factor(str_to_sentence(Occupation_Coded))) %>%
+  mutate(EatingHabits = fct_relevel(EatingHabits, c("I EAT MORE - IT IS ENOUGH", 
+                                        "NO CHANGE - IT IS ENOUGH", 
+                                        "NO CHANGE - IT IS NOT ENOUGH", 
+                                        "I EAT LESS - IT IS ENOUGH",
+                                        "I EAT LESS - IT IS NOT ENOUGH", 
+                                        "DON'T KNOW"))) %>%
+  mutate(WaterIntake = as_factor(str_to_sentence(WaterIntake))) %>%
+  mutate(WaterIntake = as_factor(recode(WaterIntake, 
+                                        "Yes - i use more" = "Yes - I use more",
+                                        "Yes - i use less" = "Yes - I use less"))) %>%
+  mutate(WaterIntake = fct_relevel(WaterIntake, c("Yes - I use more",
+                                                  "No - no change",
+                                                  "Yes - I use less",
+                                                  "Don't know",
+                                                  "Refused"))) %>%
+  mutate(ElectricityUsage = fct_relevel(ElectricityUsage, c("I HAVE BEEN ABLE TO USE MORE ENERGY",
+                                                  "NO CHANGE",
+                                                  "I HAVE HAD TO USE LESS ENERGY",
+                                                  "DON'T KNOW",
+                                                  "REFUSED"))) %>%
+  mutate(ElectricityUsage = as_factor(str_to_sentence(ElectricityUsage))) %>%
+  mutate(Electricity = str_to_sentence(Electricity)) %>%
+  mutate(Electricity = fct_relevel(Electricity, c("Solar", 
+                                                  "Generator",
+                                                  "12-volt battery",
+                                                  "Informal connection",
+                                                  "Other"))) %>%
+  mutate(HealthServices = as_factor(str_to_sentence(HealthServices))) %>%
+  mutate(HealthServices = fct_relevel(HealthServices, c("Harder", 
+                                        "The same", 
+                                        "Easier", 
+                                        "Refused",
+                                        "Don't know"))) %>%
+  mutate(HomeWarm = as_factor(str_to_sentence(HomeWarm))) %>%
+  mutate(HomeWarm = fct_relevel(HomeWarm, c("Very hot",
+                                            "Hot",
+                                            "Warm",
+                                            "Neutral",
+                                            "Slightly cool",
+                                            "Cool",
+                                            "Cold",
+                                            "Don't know"))) %>%
+  mutate(TemperatureInsideHome = as_factor(str_to_sentence(TemperatureInsideHome))) %>%
+  mutate(TemperatureInsideHome = fct_relevel(TemperatureInsideHome, c("Very hot",
+                                            "Hot",
+                                            "Warm",
+                                            "Slightly warm",
+                                            "Comfortable",
+                                            "Slightly cool",
+                                            "Cool",
+                                            "Cold",
+                                            "Don't know",
+                                            "Refused"))) %>%
+  mutate(TemperatureOutsideHome = as_factor(str_to_sentence(TemperatureOutsideHome))) %>%
+  mutate(TemperatureOutsideHome = fct_relevel(TemperatureOutsideHome, c("Intolerable", 
+                                                                        "Very difficult to tolerate", 
+                                                                        "Fairly difficult to tolerate",
+                                                                        "Slightly difficult to tolerate",
+                                                                        "Perfectly tolerable",
+                                                                        "Don't know",
+                                                                        "Refused"))) %>%
+  mutate(Experience_DONT_KNOW = fct_explicit_na(Experience_DONT_KNOW, na_level = "No")) %>%
+  select(!c(Agree, Occupation, Occupation_Translated, YesPandemicChange, YesPandemicChange_Translated, NormallyDo, NormallyDo_Translated))
+
+
+# Make some new variables
+newnexus <- nexusdata %>%
+  mutate(Employment = as_factor(recode(Occupation_Coded, # Note that this has already been done into four categories - see report
+                                       'EMPLOYED IN PRIVATE COMPANY' = "Working",
+                                       'GOVERNMENT WORK' = "Working",
+                                       'PAID LABOR/WAGE' = "Working",
+                                       'HOUSEWIFE' = "Homemaker",
+                                       'HOUSEWIFE/HUSBAND/HOMEMAKER' = "Homemaker",
+                                       'AGRICULTURE/HUSBANDRY/FISHING' = "Working",
+                                       'INFORMAL TRADE / STREET SALES' = "Working",
+                                       'BUSINESS/SELF-EMPLOYED' = "Working",
+                                       'STUDENT' = "Student",
+                                       'UNEMPLOYED' = "Not working",
+                                       'GOVERNMENT ASSISTANCE / SOCIAL PROTECTION NETWORKS [PENSIONS]' = "Not working",
+                                       'MIGRANT REMITTANCES [FROM OUTSIDE OF THE COUNTRY]' = "Not working",
+                                       'GOVERNMENT ASSISTANCE/SOCIAL PROTECTION NETWORKS [PENSIONS]' = "Not working",
+                                       'HELP FROM FAMILY AND/OR FRIENDS [FROM INSIDE OF THE COUNTRY]' = "Not working"))) %>%
+  mutate(wallmass = recode(WallMaterial,
+                           "BAMBOO POLES OR WOOD" = "Lightweight",
+                           "MUD BRICK [CRUDE/RAW/COOKED]" = "Heavyweight",
+                           "PALM FRONDS/WOVEN MATS" = "Lightweight",
+                           "REINFORCED CONCRETE" = "Heavyweight",
+                           "DON'T KNOW"= "Don't know",
+                           "REFUSED" = "Refused")) %>%
+  mutate(roofmass = recode(RoofingMaterial,
+                           "BAMBOO" = "Lightweight",
+                           "GALVANISED IRON"= "Lightweight",
+                           "PALM FRONDS"= "Lightweight",
+                           "REINFORCED CONCRETE"= "Heavyweight",
+                           "SHEET METAL [TIN/ZINC/CORRUGATED IRON]"= "Lightweight",
+                           "T-GIRDER"= "Heavyweight",
+                           "WOODEN SHINGLES"= "Lightweight",
+                           "CERAMIC TILE"= "Heavyweight",
+                           "DON'T KNOW"= "Don't know",
+                           "DRIED CLAY"= "Heavyweight",
+                           "REFUSED" = "Refused")) %>%
+  mutate(walltherm = recode(WallMaterial, "BAMBOO POLES OR WOOD" = "Lightweight low thermal conductivity",
+                            "MUD BRICK [CRUDE/RAW/COOKED]" = "Heavyweight low thermal conductivity",
+                            "PALM FRONDS/WOVEN MATS" = "Lightweight low thermal conductivity",
+                            "REINFORCED CONCRETE" = "Heavyweight high thermal conductivity",
+                            "DON'T KNOW"= "Don't know",
+                            "REFUSED" = "Refused")) %>%
+  mutate(rooftherm = recode(RoofingMaterial,
+                            "BAMBOO" = "Lightweight low thermal conductivity",
+                            "GALVANISED IRON"= "Lightweight high thermal conductivity",
+                            "PALM FRONDS"= "Lightweight low thermal conductivity",
+                            "REINFORCED CONCRETE"= "Heavyweight high thermal conductivity",
+                            "SHEET METAL [TIN/ZINC/CORRUGATED IRON]"= "Lightweight high thermal conductivity",
+                            "T-GIRDER"= "Heavyweight high thermal conductivity",
+                            "WOODEN SHINGLES"= "Lightweight low thermal conductivity",
+                            "CERAMIC TILE"= "Heavyweight low thermal conductivity",
+                            "DON'T KNOW"= "Don't know",
+                            "DRIED CLAY"= "Heavyweight low thermal conductivity",
+                            "REFUSED" = "Refused")) %>%
+  mutate(TemperatureInsideHomeCat = recode(TemperatureInsideHome,
+                                          "very hot" = "Hot", 
+                                          "hot" = "Hot", 
+                                          "warm" = "Hot", 
+                                          "slightly warm" = "Hot", 
+                                          "comfortable" = "Comfortable",
+                                          "slightly cool" = "Cold",
+                                          "cool" = "Cold",
+                                          "cold" =  "Cold")) %>%
+  mutate(HoursDayCat = cut(HoursDay, breaks=seq(0,24,4), labels=c("0-4","5-8","9-12", "13-16", "17-20", "21-24"))) %>%
+  mutate(pseudoID = row_number()) %>%
+  mutate(WallMaterial = str_to_sentence(WallMaterial)) %>%
+  mutate(RoofingMaterial = str_to_sentence(RoofingMaterial))
+
+nexusNormallyDo <- newnexus %>% pivot_longer(cols = Add_ventilation:Use_talcum_powder,
+                                             names_to = "NormallyDo_New",
+                                             values_to = "NormallyDo_Selection") %>%
+  group_by(NormallyDo_New, NormallyDo_Selection) %>%
+  mutate(NormallyDo_New = as_factor(NormallyDo_New))
+
+nexusExperience <- newnexus %>% pivot_longer(cols = Experience_Blurred_vision:Experience_Vomiting,
+                                             names_to = "Experience_New",
+                                             values_to = "Experience_Selection") %>%
+  group_by(Experience_New, Experience_Selection) %>%
+  mutate(Experience_New = as_factor(Experience_New))
+
+nexusExperienceBeforeHeat <- newnexus %>% pivot_longer(cols = `ExperienceBeforeHeat_(Blurred_vision)`:`ExperienceBeforeHeat_(Vomiting)`,
+                                                       names_to = "ExperienceBeforeHeat_New",
+                                                       values_to = "ExperienceBeforeHeat_Selection") %>%
+  group_by(ExperienceBeforeHeat_New, ExperienceBeforeHeat_Selection) %>%
+  mutate(ExperienceBeforeHeat_New = as_factor(ExperienceBeforeHeat_New))
+
+
+
+```
+
+# Graphs from previous paper
+
+## Pakistan 
+
+```{r, cache = TRUE}
+
+library(tidyverse)
+
+# Graphs for report
+
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7") # From http://www.cookbook-r.com/Graphs/Colors_(ggplot2)/#a-colorblind-friendly-palette
+newnames <- names(newnexus)
+
+
+# Page 33
+ggplot(data = newnexus %>% filter(Country=="Pakistan") %>%
+         pivot_longer(cols = Add_ventilation:Use_talcum_powder,
+                      names_to = "NormallyDo_New",
+                      values_to = "Selection") %>%
+         group_by(NormallyDo_New, Selection) %>%
+         mutate(NormallyDo_New = as_factor(NormallyDo_New)) %>%
+         summarise(n = n()) %>%
+         filter(Selection == "Yes") %>%
+         arrange(desc(n))) +
+  geom_bar(aes(x = reorder(NormallyDo_New, n), y = n), stat = "identity", fill = "#999999") +
+  scale_x_discrete(labels = c("Take_a_bath_or_shower" = "Take a bath or shower",
+                              "Go_outside" = "Go outside",
+                              "Use_fan" = "Use fan",
+                              "Do_nothing_specific" = "Do nothing specific",
+                              "Drink_cold_drink" = "Drink cold drink",
+                              "Use_manual_fan_or_cooling_device" = "Use manual fan or cooling device",
+                              "Add_ventilation" = "Add ventilation",
+                              "Turn_on_power_source" = "Turn on power source",
+                              "Drink_water" = "Drink water",
+                              "Use_a_cooler" = "Use a cooler",
+                              "Clean_floor_with_water" = "Clean floor with water",
+                              "Stay_at_home" = "Stay at home",
+                              "Sleep_or_rest" = "Sleep or rest",
+                              "Use_talcum_powder" = "Use talcum powder",
+                              "Use_AC" = "Use AC",
+                              "Undress_or_change_clothes_or_wet_clothes" = "Undress or change clothes or wet clothes",
+                              "Drink_warm_drink" = "Drink warm drink",
+                              "Sit_under_tree" = "Sit under tree")) +
+  xlab("Strategies normally used to manage heat") +
+  coord_flip()
+
+# Page 34
+newnexus %>% 
+  filter(Country == "Pakistan") %>%
+  group_by(SpendAtHome, Gender) %>%
+  count() %>%
+  group_by(Gender) %>%
+  mutate(percentage = n/sum(n)) %>%
+  ggplot(aes(x = SpendAtHome, y = percentage, fill = Gender)) +
+  geom_bar(position = "dodge", stat = "identity") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_manual(values = cbPalette) +
+  xlab("Time spent at home before pandemic") +
+  ylab("Percentage of group")
+
+# Page 35
+newnexus %>% 
+  filter(Country == "Pakistan") %>%
+  group_by(AmountOfTime, Gender) %>%
+  count() %>%
+  group_by(Gender) %>%
+  mutate(percentage = n/sum(n)) %>%
+  ggplot(aes(x = AmountOfTime, y = percentage, fill = Gender)) +
+  geom_bar(position = "dodge", stat = "identity") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_manual(values = cbPalette) +
+  xlab("Change in time at home after pandemic") +
+  ylab("Percentage of group")
+
+# Page 36
+ggplot(data = newnexus %>% filter(Country == "Pakistan")) +
+  geom_bar(aes(x = Electricity), position = "dodge", fill = "#999999") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  scale_fill_manual(values = cbPalette) +
+  ylab("n") +
+  xlab("Source of electricity")
+
+ggplot(data = newnexus %>% filter(Country == "Pakistan")) +
+  geom_bar(aes(x = HoursDay), fill = "#999999") +
+  scale_x_continuous(breaks=seq(0,24,1)) +
+  xlab("Hours of electricity per day") +
+  ylab("n")
+
+# Page 37
+ggplot(data = newnexus %>% filter(Country == "Pakistan")) +
+  geom_bar(aes(x = Electricity, fill = HoursDayCat), position = "dodge") +
+  scale_fill_manual(values = cbPalette) +
+  xlab("Source of electricity") +
+  ylab("n") +
+  labs(fill = "Hours of electricity per day")
+  
+# Page 38
+ggplot(data = newnexus %>% filter(Country == "Pakistan")) +
+  geom_bar(aes(x = reorder(ElectricityUsage, desc(ElectricityUsage))), fill = "#999999") +
+  coord_flip() +
+  xlab("Change in use of electricity") +
+  ylab("n") +
+  theme(legend.position = "none") 
+
+ggplot(data = newnexus %>% filter(Country == "Pakistan")) +
+  geom_bar(aes(x = reorder(ElectricityUsage, desc(ElectricityUsage)), fill = City), position = "dodge") +
+  coord_flip() +
+  scale_fill_manual(values = cbPalette) +
+  xlab("Change in use of electricity") +
+  ylab("n") +
+  facet_grid(rows = vars(City)) +
+  theme(legend.position = "none")
+
+# Page 39
+ggplot(data = newnexus %>% filter(Country == "Pakistan")) +
+  geom_bar(aes(x = reorder(WaterIntake, desc(WaterIntake))), fill = "#999999") +
+  coord_flip() +
+  xlab("Change in water intake") +
+  ylab("n")
+  
+ggplot(data = newnexus %>% filter(Country == "Pakistan")) +
+  geom_bar(aes(x = reorder(WaterIntake, desc(WaterIntake)), fill = City), position = "dodge") +
+  coord_flip() +
+  scale_fill_manual(values = cbPalette) +
+  xlab("Change in water intake") +
+  ylab("n") +
+  facet_grid(rows = vars(City)) 
+  theme(legend.position = "none")
+
+ggplot(data = newnexus %>% filter(Country=="Pakistan")) +
+  geom_bar(aes(x = NormallyDo_Coded)) +
+  coord_flip() # clearly some problems with NormallyDo_Coded - too many categories - need to be reorganised according to cats in report page 33
+
+ggplot(data = newnexus %>% filter(Country=="Pakistan")) +
+  geom_bar(aes(x = SpendAtHome, fill = Gender), position = "dodge") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  scale_y_continuous(labels = scales::percent) # Works okay but needs the categories to be reordered
+
+
+ggplot(data = newnexus %>% filter(Country=="Pakistan")) +
+  geom_bar(aes(x = AmountOfTime, fill = Gender), position = "dodge") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  scale_y_continuous(labels = scales::percent) # Works okay but we should use less stereotyping colours for the genders
+
+ggplot(data = newnexus %>% filter(Country=="Pakistan", HoursDay < 25)) +
+  geom_histogram(aes(x = HoursDay), position = "dodge") + #Still got some 88 value in here that should go
+  scale_x_continuous(n.breaks = 24) +
+  stat_ecdf(aes(x = HoursDay), geom = "step", pad = "FALSE")
+  geom_line(aes(y = aes(cumsum(HoursDay), x = seq(1:24)))) # This doesn't work
+
+```
+
+## India
+
+```{r, cache = TRUE}
+# Page 51
+ggplot(data = newnexus %>% filter(Country == "India")) +
+  geom_bar(aes(x = Electricity, fill = HoursDayCat), position = "dodge") +
+  scale_fill_manual(values = cbPalette) +
+  xlab("Source of electricity") +
+  ylab("n") +
+  labs(fill = "Hours of electricity per day")
+
+ggplot(data = newnexus %>% filter(Country=="India") %>%
+         pivot_longer(cols = Add_ventilation:Use_talcum_powder,
+                      names_to = "NormallyDo_New",
+                      values_to = "Selection") %>%
+         group_by(NormallyDo_New, Selection) %>%
+         mutate(NormallyDo_New = as_factor(NormallyDo_New)) %>%
+         summarise(n = n()) %>%
+         filter(Selection == "Yes") %>%
+         arrange(desc(n))) +
+  geom_bar(aes(x = reorder(NormallyDo_New, n), y = n), stat = "identity", fill = "#E69F00") +
+  scale_x_discrete(labels = c("Take_a_bath_or_shower" = "Take a bath or shower",
+                              "Go_outside" = "Go outside",
+                              "Use_fan" = "Use fan",
+                              "Do_nothing_specific" = "Do nothing specific",
+                              "Drink_cold_drink" = "Drink cold drink",
+                              "Use_manual_fan_or_cooling_device" = "Use manual fan or cooling device",
+                              "Add_ventilation" = "Add ventilation",
+                              "Turn_on_power_source" = "Turn on power source",
+                              "Drink_water" = "Drink water",
+                              "Use_a_cooler" = "Use a cooler",
+                              "Clean_floor_with_water" = "Clean floor with water",
+                              "Stay_at_home" = "Stay at home",
+                              "Sleep_or_rest" = "Sleep or rest",
+                              "Use_talcum_powder" = "Use talcum powder",
+                              "Use_AC" = "Use AC",
+                              "Undress_or_change_clothes_or_wet_clothes" = "Undress or change clothes or wet clothes",
+                              "Drink_warm_drink" = "Drink warm drink",
+                              "Sit_under_tree" = "Sit under tree",
+                              "Cant_go_outside_(COVID_related)" = "Can't go outside (COVID-related)")) +
+  xlab("Strategies normally used to manage heat") +
+  coord_flip()
+
+# Page 52
+newnexus %>% # Fantastic example from Simon Brauer https://stackoverflow.com/questions/37008705/ggplot-bar-chart-of-percentages-over-groups
+  filter(Country == "India") %>%
+  group_by(SpendAtHome, Gender) %>%
+  count() %>%
+  group_by(Gender) %>%
+  mutate(percentage = n/sum(n)) %>%
+  ggplot(aes(x = SpendAtHome, y = percentage, fill = Gender)) +
+  geom_bar(position = "dodge", stat = "identity") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_manual(values = cbPalette) +
+  xlab("Change in time at home after pandemic") +
+  ylab("Percentage of group")
+
+
+# Page 53
+newnexus %>% # Fantastic example from Simon Brauer https://stackoverflow.com/questions/37008705/ggplot-bar-chart-of-percentages-over-groups
+  filter(Country == "India") %>%
+  group_by(AmountOfTime, Gender) %>%
+  count() %>%
+  group_by(Gender) %>%
+  mutate(percentage = n/sum(n)) %>%
+  ggplot(aes(x = AmountOfTime, y = percentage, fill = Gender)) +
+  geom_bar(position = "dodge", stat = "identity") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_manual(values = cbPalette) +
+  xlab("Change in time at home after pandemic") +
+  ylab("Percentage of group")
+
+```
+
+## Indonesia 
+
+```{r, cache = TRUE}
+
+# Page 66
+ggplot(data = newnexus %>% filter(Country == "Indonesia")) +
+  geom_bar(aes(x = Occupation_Coded), fill = "#56B4E9") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  xlab("Occupation") +
+  ylab("n")
+
+ggplot(data = newnexus %>% filter(Country == "Indonesia")) +
+  geom_bar(aes(x = Electricity, fill = HoursDayCat), position = "dodge") +
+  ylab("n") +
+  xlab("Source of electricity") +
+  labs(fill = "Hours of electricity per day")
+
+
+# Page 67
+ggplot(data = newnexus %>% filter(Country=="Indonesia") %>%
+         pivot_longer(cols = Add_ventilation:Use_talcum_powder,
+                      names_to = "NormallyDo_New",
+                      values_to = "Selection") %>%
+         group_by(NormallyDo_New, Selection) %>%
+         mutate(NormallyDo_New = as_factor(NormallyDo_New)) %>%
+         summarise(n = n()) %>%
+         filter(Selection == "Yes") %>%
+         arrange(desc(n))) +
+  geom_bar(aes(x = reorder(NormallyDo_New, n), y = n), stat = "identity", fill = "#56B4E9") +
+  scale_x_discrete(labels = c("Use_fan" = "Use fan",
+                              "Add_ventilation" = "Add ventilation",
+                              "Go_outside" = "Go outside",
+                              "Take_a_bath_or_shower" = "Take a bath or shower",
+                              "Undress_or_change_clothes_or_wet_clothes" = "Undress or change clothes or wet clothes",
+                              "Use_AC" = "Use AC",
+                              "Use_manual_fan_or_cooling_device" = "Use manual fan or cooling device",
+                              "Drink_water" = "Drink water",
+                              "Sleep_or_lie_on_floor" = "Sleep or lie on floor",
+                              "Sit_under_tree" = "Sit under tree",
+                              "Turn_off_lights" = "Turn off lights",
+                              "Sleep_or_rest" = "Sleep or rest")) +
+  xlab("Strategies normally used to manage heat") +
+  coord_flip()
+
+# Page 68
+newnexus %>% # Fantastic example from Simon Brauer https://stackoverflow.com/questions/37008705/ggplot-bar-chart-of-percentages-over-groups
+  filter(Country == "Indonesia") %>%
+  group_by(SpendAtHome, Gender) %>%
+  count() %>%
+  group_by(Gender) %>%
+  mutate(percentage = n/sum(n)) %>%
+  ggplot(aes(x = SpendAtHome, y = percentage, fill = Gender)) +
+  geom_bar(position = "dodge", stat = "identity") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_manual(values = cbPalette) +
+  xlab("Time spent at home before pandemic") +
+  ylab("Percentage of group")
+
+newnexus %>% # Fantastic example from Simon Brauer https://stackoverflow.com/questions/37008705/ggplot-bar-chart-of-percentages-over-groups
+  filter(Country == "Indonesia") %>%
+  group_by(AmountOfTime, Gender) %>%
+  count() %>%
+  group_by(Gender) %>%
+  mutate(percentage = n/sum(n)) %>%
+  ggplot(aes(x = AmountOfTime, y = percentage, fill = Gender)) +
+  geom_bar(position = "dodge", stat = "identity") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_manual(values = cbPalette) +
+  xlab("Change in time spent at home after pandemic") +
+  ylab("Percentage of group")
+
+# Page 74
+ggplot(data = newnexus %>% filter(Country=="Indonesia") %>%
+         group_by(YesPandemicChange_Recoded) %>%
+         summarise(n = n()) %>%
+         filter(YesPandemicChange_Recoded != "N/A") %>%
+         arrange(-n)) +
+  geom_bar(aes(x = reorder(YesPandemicChange_Recoded, n), y = n), stat = "identity", fill = "#56B4E9") +
+  xlab("Strategies to manage heat during pandemic") +
+  coord_flip()
+
+
+```
+
+## Cameroon
+
+```{r, cache = TRUE}
+# Page 82
+ggplot(data = newnexus %>% filter(Country == "Cameroon")) +
+  geom_bar(aes(x = Occupation_Coded), fill = "#009E73") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  xlab("Occupation") +
+  ylab("n")
+  
+newnexus %>% # Fantastic example from Simon Brauer https://stackoverflow.com/questions/37008705/ggplot-bar-chart-of-percentages-over-groups
+  filter(Country == "Cameroon") %>%
+  group_by(Occupation_Coded, Gender) %>%
+  count() %>%
+  group_by(Gender) %>%
+  mutate(percentage = n/sum(n)) %>%
+  ggplot(aes(x = Occupation_Coded, y = percentage, fill = Gender)) +
+  geom_bar(position = "dodge", stat = "identity") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_manual(values = cbPalette) +
+  xlab("Occupation") +
+  ylab("Percentage of group")
+
+# Page 84
+ggplot(data = newnexus %>% filter(Country=="Cameroon") %>%
+         pivot_longer(cols = Add_ventilation:Use_talcum_powder,
+                      names_to = "NormallyDo_New",
+                      values_to = "Selection") %>%
+         group_by(NormallyDo_New, Selection) %>%
+         mutate(NormallyDo_New = as_factor(NormallyDo_New)) %>%
+         summarise(n = n()) %>%
+         filter(Selection == "Yes") %>%
+         arrange(desc(n))) +
+  geom_bar(aes(x = reorder(NormallyDo_New, n), y = n), stat = "identity", fill = "#009E73") +
+  scale_x_discrete(labels = c("Take_a_bath_or_shower" = "Take a bath or shower",
+                              "Go_outside" = "Go outside",
+                              "Use_fan" = "Use fan",
+                              "Do_nothing_specific" = "Do nothing specific",
+                              "Drink_cold_drink" = "Drink cold drink",
+                              "Use_manual_fan_or_cooling_device" = "Use manual fan or cooling device",
+                              "Add_ventilation" = "Add ventilation",
+                              "Turn_on_power_source" = "Turn on power source",
+                              "Drink_water" = "Drink water",
+                              "Use_a_cooler" = "Use a cooler",
+                              "Clean_floor_with_water" = "Clean floor with water",
+                              "Stay_at_home" = "Stay at home",
+                              "Sleep_or_rest" = "Sleep or rest",
+                              "Use_talcum_powder" = "Use talcum powder",
+                              "Use_AC" = "Use AC",
+                              "Undress_or_change_clothes_or_wet_clothes" = "Undress or change clothes or wet clothes",
+                              "Drink_warm_drink" = "Drink warm drink",
+                              "Sit_under_tree" = "Sit under tree",
+                              "Cant_go_outside_(COVID_related)" = "Can't go outside (COVID-related)",
+                              "Draw_curtains" = "Draw curtains",
+                              "Sleep_or_lie_on_floor" = "Sleep or lie on floor")) +
+  xlab("Strategies normally used to manage heat") +
+  coord_flip()
+
+# Page 85
+ggplot(data = newnexus %>% filter(Country == "Cameroon")) +
+  geom_bar(aes(x = Electricity, fill = HoursDayCat), position = "dodge") +
+  ylab("n") +
+  xlab("Source of electricity") +
+  labs(fill = "Hours of electricity per day")
+
+# Page 86
+newnexus %>% # Fantastic example from Simon Brauer https://stackoverflow.com/questions/37008705/ggplot-bar-chart-of-percentages-over-groups
+  filter(Country == "Cameroon") %>%
+  group_by(SpendAtHome, Gender) %>%
+  count() %>%
+  group_by(Gender) %>%
+  mutate(percentage = n/sum(n)) %>%
+  ggplot(aes(x = SpendAtHome, y = percentage, fill = Gender)) +
+  geom_bar(position = "dodge", stat = "identity") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_manual(values = cbPalette) +
+  xlab("Time spent at home before pandemic") +
+  ylab("Percentage of group")
+
+newnexus %>% # Fantastic example from Simon Brauer https://stackoverflow.com/questions/37008705/ggplot-bar-chart-of-percentages-over-groups
+  filter(Country == "Cameroon") %>%
+  group_by(AmountOfTime, Gender) %>%
+  count() %>%
+  group_by(Gender) %>%
+  mutate(percentage = n/sum(n)) %>%
+  ggplot(aes(x = AmountOfTime, y = percentage, fill = Gender)) +
+  geom_bar(position = "dodge", stat = "identity") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_manual(values = cbPalette) +
+  xlab("Change in time spent at home after pandemic") +
+  ylab("Percentage of group")
+```
+
+## All countries
+
+```{r, cache = TRUE}
+# Page 97
+      # No age distribution data in my data sets
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = Country, fill = Gender), position = "dodge") +
+  scale_fill_manual(values = cbPalette) +
+  ylab("n")
+
+# Page 98
+ggplot(data = newnexus) +
+  geom_bar(aes(x = Occupation_Coded, fill = Country), position = "dodge") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  scale_fill_manual(values = cbPalette) +
+  xlab("Occupation") +
+  ylab("n")
+
+# Page 99
+ggplot(data = newnexus) +
+  geom_bar(aes(x = RoofingMaterial, fill = Country)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  scale_fill_manual(values = cbPalette) +
+  facet_wrap(facets = vars(Country), ncol = 1)
+
+# Page 100
+ggplot(data = newnexus) +
+  geom_bar(aes(x = WallMaterial, fill = Country)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  scale_fill_manual(values = cbPalette) +
+  facet_wrap(facets = vars(Country), ncol = 1)
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = FloorMaterial, fill = Country)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  scale_fill_manual(values = cbPalette) +
+  facet_wrap(facets = vars(Country), ncol = 1)
+
+# Page 103
+ggplot(data = newnexus) +
+  geom_bar(aes(x = TemperatureOutsideHome, fill = Country)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  scale_fill_manual(values = cbPalette) +
+  facet_wrap(facets = vars(Country), ncol = 1) +
+  xlab("Thermal comfort outside the home")
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = TemperatureInsideHome, fill = Country)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  scale_fill_manual(values = cbPalette) +
+  facet_wrap(facets = vars(Country), ncol = 1) +
+  xlab("Thermal comfort inside the home")
+
+# Page 105
+ggplot(data = newnexus) +
+  geom_bar(aes(x = SpendAtHome, fill = Country)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  scale_fill_manual(values = cbPalette) +
+  facet_wrap(facets = vars(Country), ncol = 1) +
+  xlab("Time spent at home before pandemic") +
+  ylab("n")
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = AmountOfTime, fill = Country)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  scale_fill_manual(values = cbPalette) +
+  facet_wrap(facets = vars(Country), ncol = 1) +
+  xlab("Change in time spent at home after pandemic") +
+  ylab("Percentage of group")
+
+# Page 108
+ggplot(data = newnexus) +
+  geom_bar(aes(x = HoursDay, fill = Country)) +
+  scale_fill_manual(values = cbPalette) +
+  facet_wrap(facets = vars(Country), ncol = 1) +
+  scale_x_continuous(breaks=seq(0,24,1)) +
+  xlab("Hours of electricity per day") +
+  ylab("n")
+
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = TemperatureInsideHome, fill = TemperatureInsideHome)) +
+  facet_grid(rows = vars(Country))
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = TemperatureInsideHomeCat, fill = TemperatureInsideHomeCat)) +
+  facet_grid(rows = vars(Country))
+
+ggplot(data = newnexus %>% filter(Country == "Pakistan")) +
+  geom_bar(aes(x = WaterIntake)) +
+  scale_y_continuous(labels = scales::percent)
+
+
+ggplot(data = nexusdata) +
+  geom_point(aes(x = Temperature, y = Relative_Humidity, colour = City, size = Heat_Index)) +
+  scale_size_binned(n.breaks = 8)
+
+ggplot(data = nexusdata) +
+  geom_point(aes(x = Temperature, y = Relative_Humidity, colour = Country, size = Heat_Index)) +
+  scale_size_binned(n.breaks = 8)
+
+
+ggplot(data = newnexus) +
+  geom_jitter(aes(x = Temperature, y = HoursDay, colour = City))
+
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = Rooms, fill = City), position = "dodge")
+
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = People_in_House, fill = City), position = "dodge")
+
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = People_in_House, fill = factor(Rooms)), position = "dodge") +
+  scale_x_continuous(n.breaks = 20)
+
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = People_in_House, fill = factor(Rooms)), position = "dodge") +
+  facet_grid(rows = vars(Country)) +
+  scale_x_continuous(n.breaks = 20)
+
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = TemperatureInsideHome, fill = TemperatureOutsideHome)) +
+  facet_grid(rows = vars(TemperatureOutsideHome))
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = Temperature, fill = TemperatureOutsideHome)) +
+  facet_grid(rows = vars(TemperatureOutsideHome))
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = Temperature, fill = TemperatureInsideHome)) +
+  facet_grid(rows = vars(TemperatureInsideHome))
+
+
+ggplot(data = nexusdata) +
+  geom_bar(aes(x = SpendAtHome)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+ggplot(data = nexusdata) +
+  geom_bar(aes(x = SpendAtHome, fill = City), position = "dodge") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+ggplot(data = nexusdata) +
+  geom_bar(aes(x = SpendAtHome, fill = Country), position = "dodge") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+
+ggplot(data = nexusdata) +
+  geom_bar(aes(x = AmountOfTime)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+ggplot(data = nexusdata) +
+  geom_bar(aes(x = AmountOfTime, fill = City), position = "dodge") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+ggplot(data = nexusdata) +
+  geom_bar(aes(x = AmountOfTime, fill = Country), position = "dodge") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+
+ggplot(data = nexusdata) +
+  geom_bar(aes(x = Income)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+ggplot(data = nexusdata) +
+  geom_bar(aes(x = Income, fill = City), position = "dodge") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+ggplot(data = nexusdata) +
+  geom_bar(aes(x = Income, fill = Country), position = "dodge") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+
+ggplot(data = nexusdata) +
+  geom_bar(aes(x = EatingHabits)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+ggplot(data = nexusdata) +
+  geom_bar(aes(x = EatingHabits, fill = City), position = "dodge") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+ggplot(data = nexusdata) +
+  geom_bar(aes(x = EatingHabits, fill = Country), position = "dodge") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+
+ggplot(data = nexusdata) +
+  geom_bar(aes(x = WaterIntake)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+ggplot(data = nexusdata) +
+  geom_bar(aes(x = WaterIntake, fill = City), position = "dodge") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+ggplot(data = nexusdata) +
+  geom_bar(aes(x = WaterIntake, fill = Country), position = "dodge") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+
+ggplot(data = nexusdata) +
+  geom_bar(aes(x = ElectricityUsage)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+ggplot(data = nexusdata) +
+  geom_bar(aes(x = ElectricityUsage, fill = City), position = "dodge") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+ggplot(data = nexusdata) +
+  geom_bar(aes(x = ElectricityUsage, fill = Country), position = "dodge") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+
+
+ggplot(data = nexusdata) +
+  geom_bar(aes(x = HealthServices)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+ggplot(data = nexusdata) +
+  geom_bar(aes(x = HealthServices, fill = City), position = "dodge") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+ggplot(data = nexusdata) +
+  geom_bar(aes(x = HealthServices, fill = Country), position = "dodge") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+
+ggplot(data = nexusdata) +
+  geom_bar(aes(x = HomeWarm)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+ggplot(data = nexusdata) +
+  geom_bar(aes(x = HomeWarm, fill = City), position = "dodge") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+ggplot(data = nexusdata) +
+  geom_bar(aes(x = HomeWarm, fill = Country), position = "dodge") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+ggplot(data = nexusdata) +
+  geom_bar(aes(x = HomeWarm)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  facet_grid(rows = vars(Country))
+
+
+ggplot(data = nexusdata) +
+  geom_bar(aes(x = TemperatureInsideHome)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+ggplot(data = nexusdata) +
+  geom_bar(aes(x = TemperatureInsideHome, fill = City), position = "dodge") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+ggplot(data = nexusdata) +
+  geom_bar(aes(x = TemperatureInsideHome, fill = Country), position = "dodge") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+
+ggplot(data = nexusdata) +
+  geom_bar(aes(x = TemperatureOutsideHome)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+ggplot(data = nexusdata) +
+  geom_bar(aes(x = TemperatureOutsideHome, fill = City), position = "dodge") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+ggplot(data = nexusdata) +
+  geom_bar(aes(x = TemperatureOutsideHome, fill = Country), position = "dodge") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = WallMaterial)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = WallMaterial)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  facet_grid(rows = vars(Country))
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = wallmass)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  facet_grid(rows = vars(Country))
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = walltherm)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  facet_grid(rows = vars(Country))
+
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = RoofingMaterial)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = RoofingMaterial)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  facet_grid(rows = vars(Country))
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = roofmass)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  facet_grid(rows = vars(Country))
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = rooftherm)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  facet_grid(rows = vars(Country))
+
+
+
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = wallmass, fill = City), position = "dodge") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = wallmass, fill = Country), position = "dodge") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = roofmass)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = roofmass, fill = City), position = "dodge") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = roofmass, fill = Country), position = "dodge") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = walltherm)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = walltherm, fill = City), position = "dodge") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = walltherm, fill = Country), position = "dodge") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = rooftherm)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = rooftherm, fill = City), position = "dodge") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = rooftherm, fill = Country), position = "dodge") +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = Temperature, fill = rooftherm)) +
+  facet_grid(rows = vars(Country))
+
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = Windows, fill = rooftherm)) +
+  facet_grid(rows = vars(Country))
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = Windows, fill = walltherm)) +
+  facet_grid(rows = vars(Country))
+
+
+ggplot(data = newnexus %>% filter(TemperatureInsideHome!="don't know"&TemperatureInsideHome!="refused")) +
+  geom_bar(aes(x = Windows, fill = TemperatureInsideHome)) +
+  facet_grid(rows = vars(Country))
+
+ggplot(data = newnexus %>% filter(TemperatureInsideHome!="don't know"&TemperatureInsideHome!="refused")) +
+  geom_bar(aes(x = Rooms, fill = TemperatureInsideHome)) +
+  facet_grid(rows = vars(Country))
+
+
+ggplot(data = newnexus %>% filter(TemperatureInsideHome!="don't know"&TemperatureInsideHome!="refused")) +
+  geom_bar(aes(x = Windows, fill = Country), position = "dodge") +
+  facet_grid(rows = vars(TemperatureInsideHome))
+
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = wallmass, fill = roofmass))
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = wallmass, fill = roofmass)) +
+  facet_grid(rows = vars(Country))
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = walltherm, fill = rooftherm)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = walltherm, fill = rooftherm)) +
+  facet_grid(rows = vars(Country)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+##########################
+
+ggplot(data = nexusdata) +
+  geom_violin(aes(x = City, y = HoursDay))
+
+ggplot(data = nexusdata) +
+  geom_histogram(aes(x = HoursDay, fill = City), binwidth = 2) +
+    facet_grid(rows = vars(City))
+
+ggplot(data = nexusdata) +
+  geom_histogram(aes(x = People_in_House, fill = City), binwidth = 2) +
+  facet_grid(rows = vars(City))
+
+ggplot(data = nexusdata) +
+  geom_bar(aes(x = Windows, fill = City)) +
+  facet_grid(rows = vars(City))
+
+
+```
+
+
+
+# Table 1 creation 
+
+## Characteristics of the population
+
+```{r, cache = TRUE}
+library(table1)
+nexusdata2<-nexusdata
+fac_cols <- sapply(nexusdata, is.character)     
+nexusdata2[fac_cols] <- lapply(nexusdata2[fac_cols], as.factor)
+
+#Use the table1 command to produce a table 1
+t1<-table1(~ Gender + Occupation_Coded + Language | Country, nexusdata2)
+t1
+
+```
+
+
+
+## Housing materials and windows
+
+```{r, cache = TRUE}
+
+t2<-table1(~ wallmass + roofmass + walltherm + rooftherm + Windows | Country, data = newnexus)
+t2
+```
+
+
+
+# Regression analysis 
+
+## WallTherm {.tabset}
+
+### Pakistan
+
+Standard model
+
+```{r, message= FALSE}
+library(tidyverse)
+library(jtools)
+library(kableExtra)
+library(tidyverse)
+
+newnexus<-filter(newnexus, walltherm != "Don't know") %>% 
+  filter(walltherm != "Refused") %>%
+  filter(rooftherm != "Refused") %>% 
+  filter(rooftherm != "Don't know") %>% 
+  mutate(TemperatureInsideHomeCat = recode(TemperatureInsideHome,
+
+                                          "Very hot" = "Hot",
+
+                                          "Hot" = "Hot",
+
+                                          "Warm" = "Hot",
+
+                                          "Slightly warm" = "Hot",
+
+                                          "Comfortable" = "Cold",
+
+                                          "Slightly cool" = "Cold",
+
+                                          "Cool" = "Cold",
+
+                                          "Cold" =  "Cold")) 
+
+newnexus$TemperatureInsideHome <- relevel(newnexus$TemperatureInsideHome, ref = "Cold")
+
+newnexus<-newnexus %>% 
+  filter(TemperatureInsideHomeCat != "Don't know") %>% 
+  filter(TemperatureInsideHomeCat != "Refused") 
+
+unique(newnexus$TemperatureInsideHomeCat)
+summary(newnexus$TemperatureInsideHomeCat)
+
+newnexus <- mutate(newnexus, NormallyDo_Coded = recode(NormallyDo_Coded,
+                                                        "Do nothing specific" = "Do nothing",
+                                                        "Go outside + Sit under tree" = "Go outside",
+                                                        "Unclear" = "Do nothing",
+                                                        "Use manual fan/cooling device" = "Use fan",
+                                                        "Use cooler" = "Add ventilation",
+                                                        "Drink cold drink" = "Drink something",
+                                                        "Drink water" = "Drink something",
+                                                        "Undress" = "Other",
+                                                        "Go outside + Use fan" = "Use fan", 
+                                                        "Add ventilation + Go outside" = "Add ventilation",
+                                                        "Take bath/shower + Use fan" = "Use fan",
+                                                        "Take bath/shower + Go outside" = "Go outside"
+  ))
+
+newnexus<-filter(newnexus, NormallyDo_Coded == "Do nothing" | NormallyDo_Coded == "Go outside" | NormallyDo_Coded == "Use fan" | NormallyDo_Coded =="Add ventilation"| NormallyDo_Coded =="Drink something" | NormallyDo_Coded =="Take bath/shower")
+
+newnexus<-newnexus %>% 
+  mutate(floortherm = recode(FloorMaterial,
+
+                                          "ASPHALTED FLOOR" = "Heavyweight high thermal conductivity",
+
+                                          "CEMENT" = "Heavyweight high thermal conductivity",
+
+                                          "CERAMIC TILES" = "Heavyweight low thermal conductivity",
+
+                                          "CLAY COURT" = "Heavyweight low thermal conductivity",
+
+                                          "OTHER" = "Other",
+
+                                          "SAND/DIRT" = "Lightweight low thermal conductivity",
+
+                                          "WOOD/BAMBOO" = "Lightweight low thermal conductivity",
+
+                                          "CLAY COAT" =  "Heavyweight low thermal conductivity",
+                                "DON'T KNOW" = "Other"))
+
+test<- newnexus %>% 
+  group_by(NormallyDo_Coded) %>% 
+  count() %>% 
+  arrange(-n)
+
+kable(test)
+
+PakistanModel<-filter(newnexus, Country == "Pakistan")
+
+Model1 <- glm(TemperatureInsideHomeCat ~ walltherm, data = PakistanModel, family = binomial())
+summ(Model1)
+```
+
+Standard model + cooling practices + temperature outside home + Windows + Electricity + Water
+
+```{r}
+
+Model5 <- glm(TemperatureInsideHomeCat ~ walltherm  + TemperatureOutsideHome + Electricity + DrinkingWater + Gender 
+, data = PakistanModel, family = binomial())
+summ(Model5)
+
+```
+
+### India
+
+Standard model
+
+```{r}
+
+IndiaModel<-filter(newnexus, Country == "India")
+
+Model2 <- glm(TemperatureInsideHomeCat ~ walltherm, data = IndiaModel, family = binomial())
+summ(Model2)
+
+```
+
+Standard model + cooling practices + temperature outside home
+
+```{r}
+
+Model5 <- glm(TemperatureInsideHomeCat ~ walltherm + NormallyDo_Coded + TemperatureOutsideHome + DrinkingWater + Gender + SpendAtHome + Windows , data = IndiaModel, family = binomial())
+summ(Model5)
+
+```
+
+### Indonesia
+
+Standard model
+
+```{r}
+
+IndonesiaModel<-filter(newnexus, Country == "Indonesia")
+
+Model3 <- glm(TemperatureInsideHomeCat ~ walltherm, data = IndonesiaModel, family = binomial())
+summ(Model3)
+
+```
+
+Standard model + cooling practices + temperature outside home
+
+```{r}
+
+Model5 <- glm(TemperatureInsideHomeCat ~ walltherm + NormallyDo_Coded + TemperatureOutsideHome + Gender + Rooms + Windows , data = IndonesiaModel, family = binomial())
+summ(Model5)
+
+```
+
+### Cameroon
+
+Standard Model
+
+```{r}
+CameroonModel<-filter(newnexus, Country == "Cameroon")
+
+Model4 <- glm(TemperatureInsideHomeCat ~ walltherm, data = CameroonModel, family = binomial())
+summ(Model4)
+
+```
+
+Standard model + cooling practices + temperature outside home + Windows + Electricity + Water + Time at home
+
+```{r}
+
+Model5 <- glm(TemperatureInsideHomeCat ~ walltherm + NormallyDo_Coded + TemperatureOutsideHome + Electricity + DrinkingWater + Gender + SpendAtHome, data = CameroonModel, family = binomial())
+summ(Model5)
+
+```
+
+
+
+## RoofTherm {.tabset}
+
+### Pakistan
+
+Standard model
+
+```{r}
+library(tidyverse)
+library(jtools)
+
+newnexus<-filter(newnexus, walltherm != "Don't know") %>% 
+  filter(walltherm != "Refused") %>%
+  filter(rooftherm != "Refused") %>% 
+  filter(rooftherm != "Don't know") %>% 
+  mutate(TemperatureInsideHomeCat = recode(TemperatureInsideHome,
+
+                                          "Very hot" = "Hot",
+
+                                          "Hot" = "Hot",
+
+                                          "Warm" = "Hot",
+
+                                          "Slightly warm" = "Hot",
+
+                                          "Comfortable" = "Cold",
+
+                                          "Slightly cool" = "Cold",
+
+                                          "Cool" = "Cold",
+
+                                          "Cold" =  "Cold")) 
+newnexus$TemperatureInsideHome <- relevel(newnexus$TemperatureInsideHome, ref = "Cold")
+
+newnexus<-newnexus %>% 
+  filter(TemperatureInsideHomeCat != "Don't know") %>% 
+  filter(TemperatureInsideHomeCat != "Refused") 
+
+PakistanModel<-filter(newnexus, Country == "Pakistan")
+
+Model1 <- glm(TemperatureInsideHomeCat ~ rooftherm, data = PakistanModel, family = binomial())
+summ(Model1)
+```
+
+Standard model + 529
+
+```{r}
+
+Model10 <- glm(TemperatureInsideHomeCat ~ rooftherm  + TemperatureOutsideHome + Electricity + DrinkingWater + Gender + NormallyDo_Coded + People_in_House 
+, data = PakistanModel, family = binomial())
+summ(Model10)
+
+```
+
+
+### India
+
+standard model
+
+```{r}
+
+IndiaModel<-filter(newnexus, Country == "India")
+
+Model2 <- glm(TemperatureInsideHomeCat ~ rooftherm, data = IndiaModel, family = binomial())
+summ(Model2)
+
+```
+
+standard model  + 1041
+
+```{r}
+
+Model11 <- glm(TemperatureInsideHomeCat ~ rooftherm  + TemperatureOutsideHome + DrinkingWater + Gender + NormallyDo_Coded + SpendAtHome
+, data = IndiaModel, family = binomial())
+summ(Model11)
+
+```
+
+
+### Indonesia
+
+standard model
+
+```{r}
+IndonesiaModel<-filter(newnexus, Country == "Indonesia")
+
+Model3 <- glm(TemperatureInsideHomeCat ~ rooftherm, data = IndonesiaModel, family = binomial())
+summ(Model3)
+
+```
+
+Standard model + 1102
+
+```{r}
+
+Model12 <- glm(TemperatureInsideHomeCat ~ rooftherm  + TemperatureOutsideHome + Electricity + DrinkingWater + Gender + NormallyDo_Coded + SpendAtHome + Windows + People_in_House 
+, data = IndonesiaModel, family = binomial())
+summ(Model12)
+
+```
+
+
+### Cameroon
+
+standard model 
+
+```{r}
+CameroonModel<-filter(newnexus, Country == "Cameroon")
+
+Model4 <- glm(TemperatureInsideHomeCat ~ rooftherm, data = CameroonModel, family = binomial())
+summ(Model4)
+
+```
+
+standard model + 950
+
+```{r}
+
+Model13 <- glm(TemperatureInsideHomeCat ~ rooftherm  + TemperatureOutsideHome + Gender + NormallyDo_Coded + SpendAtHome + Windows 
+, data = CameroonModel, family = binomial())
+summ(Model13)
+
+```
+
+
+## FloorTherm {.tabset}
+
+### Pakistan
+```{r}
+
+Model5 <- glm(TemperatureInsideHomeCat ~ floortherm  + TemperatureOutsideHome + Electricity + DrinkingWater + Gender 
+, data = PakistanModel, family = binomial())
+summ(Model5)
+
+
+```
+
+### India
+Standard model + cooling practices + temperature outside home
+
+```{r}
+
+Model5 <- glm(TemperatureInsideHomeCat ~ floortherm + NormallyDo_Coded + TemperatureOutsideHome + DrinkingWater + Gender + SpendAtHome + Windows , data = IndiaModel, family = binomial())
+summ(Model5)
+
+```
+
+### Indonesia
+
+Standard model + cooling practices + temperature outside home
+
+```{r}
+
+Model5 <- glm(TemperatureInsideHomeCat ~ floortherm + NormallyDo_Coded + TemperatureOutsideHome + Gender + Rooms + Windows , data = IndonesiaModel, family = binomial())
+summ(Model5)
+
+```
+
+### Cameroon
+
+Standard model + cooling practices + temperature outside home + Windows + Electricity + Water + Time at home
+
+```{r}
+
+Model5 <- glm(TemperatureInsideHomeCat ~ floortherm + NormallyDo_Coded + TemperatureOutsideHome + Electricity + DrinkingWater + Gender + SpendAtHome, data = CameroonModel, family = binomial())
+summ(Model5)
+
+```
+
+
+
+
+# Diagram of variable relationships
+
+```{r, out.width = "100%", cache = TRUE}
+library(knitr)
+include_graphics("Variable_diagram.png")
+```
+
+
+
+# Testing
+```{r}
+library(stringr)
+library(rstatix)
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = rooftherm, fill = Country)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  scale_fill_manual(values = cbPalette) +
+  facet_wrap(facets = vars(Country), ncol = 1) + theme(axis.text.x = element_text(angle = 45, vjust = 0.75))
+
+newnexus %>% 
+  group_by(Country, rooftherm) %>% 
+  count()
+
+# Page 100
+ggplot(data = newnexus) +
+  geom_bar(aes(x = walltherm, fill = Country)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  scale_fill_manual(values = cbPalette) +
+  facet_wrap(facets = vars(Country), ncol = 1)
+
+newnexus %>% 
+  group_by(Country, walltherm) %>% 
+  count()
+
+newnexus<- filter(newnexus, floortherm != "Other")
+
+ggplot(data = newnexus) +
+  geom_bar(aes(x = floortherm, fill = Country)) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  scale_fill_manual(values = cbPalette) +
+  facet_wrap(facets = vars(Country), ncol = 1) + theme(axis.text.x = element_text(angle = 45, vjust = 0.75))
+
+newnexus %>% 
+  group_by(Country, floortherm) %>% 
+  count()
+
+cramer_v(newnexus$walltherm, newnexus$rooftherm)
+
+Model5 <- glm(TemperatureInsideHomeCat ~ Temperature, data = newnexus, family = binomial())
+summ(Model5)
+```
+
